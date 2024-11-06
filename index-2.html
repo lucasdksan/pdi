@@ -9,23 +9,28 @@
 <body>
     <p id="status">OpenCV.js is loading...</p>
     <div>
-        <div class="container-inputs">
-            <span>Coordenadas do primeiro ponto P1</span>
-            <input type="number" id="p1x" />
-            <input type="number" id="p1y" />
+        <div>
+            <div class="container-inputs">
+                <span>Coordenadas do primeiro ponto P1</span>
+                <input type="number" id="p1x" />
+                <input type="number" id="p1y" />
+            </div>
+            <div class="container-inputs">
+                <span>Coordenadas do primeiro ponto P2</span>
+                <input type="number" id="p2x" />
+                <input type="number" id="p2y" />
+            </div>
+            <button class="upload-image">Carregar</button>
         </div>
-        <div class="container-inputs">
-            <span>Coordenadas do primeiro ponto P2</span>
-            <input type="number" id="p2x" />
-            <input type="number" id="p2y" />
-        </div>
-        <div class="inputoutput">
-            <img id="imageSrc" alt="No Image" />
-            <div class="caption">imageSrc <input type="file" id="fileInput" name="file" /></div>
-        </div>
-        <div class="inputoutput">
-            <canvas id="canvasOutput"></canvas>
-            <div class="caption">canvasOutput</div>
+        <div style="display: flex;gap: 100px;margin-top: 100px;">
+            <div class="inputoutput">
+                <img id="imageSrc" alt="No Image" />
+                <div class="caption">imageSrc <input type="file" id="fileInput" name="file" /></div>
+            </div>
+            <div class="inputoutput">
+                <canvas id="canvasOutput"></canvas>
+                <div class="caption">canvasOutput</div>
+            </div>
         </div>
     </div>
     <script async src="./libs/opencv.js" type="text/javascript"></script>
