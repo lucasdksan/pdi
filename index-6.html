@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Esteganografia em imagens digitais</title>
+    <script async src="https://docs.opencv.org/4.x/opencv.js" type="text/javascript"></script>
+</head>
+
+<body>
+    <p id="status">OpenCV.js is loading...</p>
+    <div style="display: flex;gap: 100px;">
+        <div class="inputoutput">
+            <img id="imageSrc" alt="No Image" />
+            <div class="caption">imageSrc <input type="file" id="fileInput" name="file" /></div>
+        </div>
+        <div class="inputoutput">
+            <canvas id="canvasOutput"></canvas>
+            <div class="caption">canvasOutput</div>
+        </div>
+    </div>
+
+    <script src="./libs/script6.js"></script>
+</body>
+
+</html>

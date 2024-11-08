@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenCV.js Example</title>
+    <script async src="https://docs.opencv.org/master/opencv.js" onload="onOpenCVLoaded();" type="text/javascript"></script>
+    <style>
+        #canvasOutput {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <h1>OpenCV.js Example</h1>
+    
+    <!-- Status de carregamento -->
+    <div id="status">Carregando OpenCV.js...</div>
+    
+    <!-- Botão para iniciar as operações -->
+    <button id="startButton" onclick="realizarOperacoes()" disabled>Iniciar Operações</button>
+    
+    <!-- Elementos de entrada de imagem -->
+    <input type="file" id="fileInput1" accept="image/*" onchange="carregarImagem(1)">
+    <input type="file" id="fileInput2" accept="image/*" onchange="carregarImagem(2)">
+    
+    <br><br>
+    
+    <!-- Canvas para exibir o resultado -->
+    <canvas id="canvasOutput"></canvas>
+    
+    <script type="text/javascript">
+        let statusElement = document.getElementById('status');
+        let startButton = document.getElementById('startButton');
+        let imageElement1, imageElement2;
+        
+        // Função chamada quando o OpenCV.js estiver carregado
+        function onOpenCVLoaded() {
+            statusElement.innerHTML = 'OpenCV.js is ready.';
+            startButton.disabled = false;
+        }
+
+        // Função para carregar imagens a partir de um input de arquivo
+        function carregarImagem(imageNumber) {
+            let fileInput = imageNumber === 1 ? document.getElementById('fileInput1') : document.getElementById('fileInput2');
+            let file = fileInput.files[0];
+
+            if (!file) {
+                alert("Por favor, selecione uma imagem.");
+                return;
+            }
+
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                let img = new Image();
+                img.onload = function() {
+                    if (imageNumber === 1) {
+                        imageElement1 = img;
+                    } else {
+                        imageElement2 = img;
+                    }
+                    // Habilitar o botão quando ambas as imagens estiverem carregadas
+                    if (imageElement1 && imageElement2) {
+                        startButton.disabled = false;
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Função para realizar as operações com OpenCV.js
+        function realizarOperacoes() {
+            if (!imageElement1 || !imageElement2) {
+                alert("Ambas as imagens devem ser carregadas.");
+                return;
+            }
+
+            // Convertendo as imagens em Mat (corrigido)
+            let mat1 = cv.imread(imageElement1);
+            let mat2 = cv.imread(imageElement2);
+
+            // Verificando se as imagens têm o mesmo tamanho
+            if (mat1.size().width !== mat2.size().width || mat1.size().height !== mat2.size().height) {
+                alert("As imagens devem ter o mesmo tamanho.");
+                mat1.delete();
+                mat2.delete();
+                return;
+            }
+
+            // Concatenando as imagens horizontalmente
+            let comb = new cv.Mat();
+            cv.hconcat([mat1, mat2], comb); // Aqui usamos Mat em vez de objetos genéricos
+
+            // Exibe a concatenação das imagens
+            cv.imshow('canvasOutput', comb);
+
+            // Realizando operações aritméticas
+            let imgAdd = new cv.Mat();
+            let imgSub = new cv.Mat();
+            let imgMax = new cv.Mat();
+            let imgMin = new cv.Mat();
+            let imgAddWeighted = new cv.Mat();
+
+            // Operações aritméticas
+            cv.add(mat1, mat2, imgAdd);
+            cv.absdiff(mat1, mat2, imgSub);
+            cv.max(mat1, mat2, imgMax);
+            cv.min(mat1, mat2, imgMin);
+            cv.addWeighted(mat1, 1, mat2, 0.3, 0, imgAddWeighted);
+
+            // Concatenando os resultados das operações aritméticas
+            let comb2 = new cv.Mat();
+            cv.hconcat([imgAdd, imgSub], comb2);
+            cv.hconcat([comb2, imgMax], comb2);
+            cv.hconcat([comb2, imgMin], comb2);
+            cv.hconcat([comb2, imgAddWeighted], comb2);
+
+            // Exibe o resultado das operações aritméticas
+            cv.imshow('canvasOutput', comb2);
+
+            // Realizando operações lógicas
+            let imgAnd = new cv.Mat();
+            let imgOr = new cv.Mat();
+            let imgNot = new cv.Mat();
+            let imgXor = new cv.Mat();
+
+            // Operações lógicas
+            cv.bitwise_and(mat1, mat2, imgAnd);
+            cv.bitwise_or(mat1, mat2, imgOr);
+            cv.bitwise_not(mat1, imgNot);
+            cv.bitwise_xor(mat1, mat2, imgXor);
+
+            // Concatenando os resultados das operações lógicas
+            let comb3 = new cv.Mat();
+            cv.hconcat([imgAnd, imgOr], comb3);
+            cv.hconcat([comb3, imgNot], comb3);
+            cv.hconcat([comb3, imgXor], comb3);
+
+            // Exibe o resultado das operações lógicas
+            cv.imshow('canvasOutput', comb3);
+
+            // Liberando a memória
+            mat1.delete();
+            mat2.delete();
+            imgAdd.delete();
+            imgSub.delete();
+            imgMax.delete();
+            imgMin.delete();
+            imgAddWeighted.delete();
+            imgAnd.delete();
+            imgOr.delete();
+            imgNot.delete();
+            imgXor.delete();
+            comb.delete();
+            comb2.delete();
+            comb3.delete();
+        }
+    </script>
+</body>
+</html>

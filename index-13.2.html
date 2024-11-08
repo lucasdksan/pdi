@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Correção de Perspectiva com OpenCV.js</title>
+  <script async src="https://docs.opencv.org/master/opencv.js"></script>
+  <style>
+    canvas {
+      display: block;
+      margin: 10px auto;
+    }
+  </style>
+</head>
+<body>
+  <h2>Correção de Perspectiva com OpenCV.js</h2>
+  <input type="file" id="fileInput" disabled />
+  <div>
+    <canvas id="canvasOriginal"></canvas>
+    <canvas id="canvasCorrigida"></canvas>
+  </div>
+
+  <script>
+    var statusElement = document.createElement('div');
+    document.body.appendChild(statusElement);
+
+    var startButton = document.getElementById('fileInput');
+    
+    // Definindo a função de inicialização do OpenCV.js
+    var Module = {
+      onRuntimeInitialized() {
+        statusElement.innerHTML = 'OpenCV.js is ready.';
+        startButton.disabled = false;
+      }
+    };
+
+    // Função para calcular a distância euclidiana entre dois pontos
+    function calcularDistancia(p1, p2) {
+      return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+    }
+
+    // Variáveis globais
+    let srcPoints = [];
+    let canvas, ctx;
+    let mat;  // Matriz da imagem
+
+    // Função para desenhar círculos nos pontos selecionados
+    function desenharPontos() {
+      for (let i = 0; i < srcPoints.length; i++) {
+        ctx.beginPath();
+        ctx.arc(srcPoints[i].x, srcPoints[i].y, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = "red";
+        ctx.fill();
+      }
+    }
+
+    // Função para capturar os cliques do mouse e registrar os pontos
+    function capturarPontos(event) {
+      if (srcPoints.length < 4) {
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        srcPoints.push({ x: x, y: y });
+
+        // Desenha o ponto clicado
+        desenharPontos();
+
+        // Se já tiver 4 pontos, realiza a correção de perspectiva
+        if (srcPoints.length === 4) {
+          aplicarCorrecao();
+        }
+      }
+    }
+
+    // Função para carregar a imagem e aplicar a correção de perspectiva
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // Cria uma imagem
+      const img = new Image();
+      img.onload = function() {
+        // Carrega a imagem no OpenCV.js
+        mat = cv.imread(img);
+        
+        // Cria o canvas para desenhar os pontos
+        canvas = document.getElementById('canvasOriginal');
+        ctx = canvas.getContext('2d');
+        canvas.width = mat.cols;
+        canvas.height = mat.rows;
+
+        // Exibe a imagem original no canvas
+        cv.imshow('canvasOriginal', mat);
+        
+        // Limpa os pontos anteriores
+        srcPoints = [];
+
+        // Adiciona o ouvinte de clique do mouse
+        canvas.addEventListener('click', capturarPontos);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    }
+
+    // Função para aplicar a correção de perspectiva
+    function aplicarCorrecao() {
+      // Calcula a largura e altura da nova imagem usando a distância euclidiana
+      let width = Math.max(
+        calcularDistancia(srcPoints[0], srcPoints[1]),
+        calcularDistancia(srcPoints[2], srcPoints[3])
+      );
+      
+      let height = Math.max(
+        calcularDistancia(srcPoints[1], srcPoints[2]),
+        calcularDistancia(srcPoints[3], srcPoints[0])
+      );
+
+      console.log('Largura:', width);
+      console.log('Altura:', height);
+
+      // Define os pontos de destino
+      let dstPoints = [
+        new cv.Point(0, 0),
+        new cv.Point(width - 1, 0),
+        new cv.Point(width - 1, height - 1),
+        new cv.Point(0, height - 1)
+      ];
+
+      // Converte os pontos para cv.Mat
+      let srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        srcPoints[0].x, srcPoints[0].y,
+        srcPoints[1].x, srcPoints[1].y,
+        srcPoints[2].x, srcPoints[2].y,
+        srcPoints[3].x, srcPoints[3].y
+      ]);
+
+      let dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        dstPoints[0].x, dstPoints[0].y,
+        dstPoints[1].x, dstPoints[1].y,
+        dstPoints[2].x, dstPoints[2].y,
+        dstPoints[3].x, dstPoints[3].y
+      ]);
+
+      // Calcula a matriz de transformação de perspectiva
+      let perspectiveMatrix = cv.getPerspectiveTransform(srcMat, dstMat);
+
+      // Aplica a transformação na imagem
+      let correctedImage = new cv.Mat();
+      cv.warpPerspective(mat, correctedImage, perspectiveMatrix, new cv.Size(width, height));
+
+      // Exibe as imagens no canvas
+      cv.imshow('canvasCorrigida', correctedImage);
+
+      // Libera a memória
+      correctedImage.delete();
+      srcMat.delete();
+      dstMat.delete();
+    }
+
+    // Adiciona o evento de clique para o file input
+    document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+  </script>
+</body>
+</html>

@@ -8,6 +8,8 @@ inputElement.addEventListener('change', (e) => {
 imgElement.onload = function () {
     let mat = cv.imread(imgElement);
 
+    // console.log({ cv })
+
     const width = mat.rows;
     const height = mat.cols;
 
