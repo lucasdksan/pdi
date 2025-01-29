@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Momentos das Componentes Conectadas</title>
+</head>
+
+<body>
+    <button id="start" onclick="start()" disabled>Start</button>
+    <br>
+    <input type="file" id="fileInput" accept="image/*">
+    <br>
+    <canvas id="canvas"></canvas>
+
+    <script async src="./libs/opencv.js" type="text/javascript"></script>
+    <script>var statusElement = document.createElement('div');
+        var startButton = document.getElementById('start');
+        document.body.appendChild(statusElement);
+
+        var Module = {
+            onRuntimeInitialized() {
+                statusElement.innerHTML = 'OpenCV.js is ready.';
+                startButton.disabled = false;
+            }
+        };
+
+        function start() {
+            function processImage(imgElement) {
+                try {
+                    let img = cv.imread(imgElement);  // Lê a imagem
+                    console.log('Imagem carregada com sucesso.');
+                    let gray = new cv.Mat();
+                    cv.cvtColor(img, gray, cv.COLOR_RGBA2GRAY);  // Converte para escala de cinza
+                    console.log('Imagem convertida para escala de cinza.');
+
+                    // Aplica o threshold
+                    let binary = new cv.Mat();
+                    cv.threshold(gray, binary, 1, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU);
+                    console.log('Threshold aplicado com sucesso.');
+
+                    // Encontrar componentes conectadas
+                    let labels = new cv.Mat();
+                    let stats = new cv.Mat();
+                    let centroids = new cv.Mat();
+                    let nLabels = cv.connectedComponentsWithStats(binary, labels, stats, centroids);
+                    console.log('Componentes conectadas encontradas. Número de componentes:', nLabels);
+
+                    // Calcular momentos e Hu Moments para cada componente conectada
+                    let output = new cv.Mat();
+                    cv.cvtColor(binary, output, cv.COLOR_GRAY2RGBA);
+                    console.log('Imagem binária convertida para RGBA.');
+
+                    let outputText = "Momentos de Hu para cada componente conectada:\n";
+
+                    // Itera sobre as componentes conectadas, ignorando a componente de fundo (rotulada como 0)
+                    for (let i = 1; i < nLabels; i++) {
+                        // Encontrar os contornos da componente conectada
+                        let componentMask = new cv.Mat();
+                        let label1 = new cv.Mat(labels.rows, labels.cols, cv.CV_8UC1, new cv.Scalar(1));  // Cria uma Mat com o valor 1
+                        cv.compare(labels, label1, componentMask, cv.CMP_EQ);
+
+                        let contours = new cv.MatVector();
+                        let hierarchy = new cv.Mat();
+                        cv.findContours(componentMask, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+                        // Calcular os momentos
+                        let momentos = cv.moments(contours.get(0));
+                        let hu = new cv.Mat(7, 1, cv.CV_64F);
+                        cv.huMoments(momentos, hu);
+
+                        // Adiciona os momentos no console
+                        outputText += `Componente ${i} - Hu Moments: [`;
+                        for (let j = 0; j < 7; j++) {
+                            hu[j] = -1 * Math.sign(hu[j]) * Math.log10(Math.abs(hu[j]));
+                            outputText += hu[j] + (j < 6 ? ", " : "");
+                        }
+                        outputText += "]\n";
+
+                        // Desenha a componente conectada
+                        let color = [Math.random() * 255, Math.random() * 255, Math.random() * 255, 255];  // Cor aleatória
+                        cv.drawContours(output, contours, 0, color, 2);
+
+                        // Exibe índice do contorno
+                        let moments = cv.moments(contours.get(0));
+                        let center = new cv.Point(moments.m10 / moments.m00, moments.m01 / moments.m00);
+                        cv.putText(output, i.toString(), center, cv.FONT_HERSHEY_SIMPLEX, 0.5, [0, 0, 0, 255], 2);
+                        cv.putText(output, i.toString(), center, cv.FONT_HERSHEY_SIMPLEX, 0.5, [255, 255, 255, 255], 1);
+
+                        componentMask.delete();
+                        label1.delete();  // Limpa a matriz label1
+                    }
+
+                    // Exibe os contornos na tela
+                    console.log(outputText);
+                    cv.imshow('canvas', output);
+
+                    // Libera a memória
+                    img.delete();
+                    gray.delete();
+                    binary.delete();
+                    labels.delete();
+                    stats.delete();
+                    centroids.delete();
+                    output.delete();
+                } catch (error) {
+                    console.error("Erro ao processar a imagem:", error);
+                }
+            }
+
+            // Lê a imagem carregada pelo usuário
+            document.getElementById('fileInput').addEventListener('change', (e) => {
+                let reader = new FileReader();
+                reader.onload = function (event) {
+                    let imgElement = document.createElement('img');
+                    imgElement.onload = function () {
+                        processImage(imgElement);
+                    };
+                    imgElement.src = event.target.result;
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            });
+        }
+    </script>
+</body>
+
+</html>

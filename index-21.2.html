@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Contornos com OpenCV.js</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Contornos</h1>
+    <button id="start" onclick="start()" disabled>Start</button>
+
+    <input id="fileInput" type="file" />
+
+    <div id="svgOutput"></div>
+
+    <script async src="./libs/opencv.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        var statusElement = document.createElement('div');
+        var startButton = document.getElementById('start');
+        document.body.appendChild(statusElement);
+
+        var Module = {
+            onRuntimeInitialized() {
+                statusElement.innerHTML = 'OpenCV.js is ready.';
+                startButton.disabled = false;
+            }
+        };
+
+        function start() {
+            function processImage2(imageElement) {
+                let src = cv.imread(imageElement);
+                let gray = new cv.Mat();
+                let contours = new cv.MatVector();
+                let hierarchy = new cv.Mat();
+
+                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+                cv.threshold(gray, gray, 1, 255, cv.THRESH_BINARY + cv.THRESH_OTSU);
+
+                cv.findContours(gray, contours, hierarchy, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE);
+
+                let svgContent = `<svg height="${gray.rows}" width="${gray.cols}" xmlns="http://www.w3.org/2000/svg">`;
+
+                for (let i = 0; i < contours.size(); i++) {
+                    let contour = contours.get(i);
+                    let d = `M ${contour.data32S[0]} ${contour.data32S[1]} `;
+                    for (let j = 1; j < contour.rows; j++) {
+                        d += `L${contour.data32S[j * 2]} ${contour.data32S[j * 2 + 1]} `;
+                    }
+                    d += "Z";
+                    svgContent += `<path d="${d}" fill="#cccccc" stroke="black" stroke-width="1" />`;
+                }
+
+                svgContent += "</svg>";
+                document.getElementById("svgOutput").innerHTML = svgContent;
+
+                cv.drawContours(src, contours, -1, new cv.Scalar(255, 0, 0, 255));
+                cv.imshow('canvasOutput', src);
+
+                console.log(`Número de contornos extraídos: ${contours.size()}`);
+
+                src.delete();
+                gray.delete();
+                contours.delete();
+                hierarchy.delete();
+            }
+
+            function processImage(imageElement) {
+                let src = cv.imread(imageElement);
+                let gray = new cv.Mat();
+                let contours = new cv.MatVector();
+                let hierarchy = new cv.Mat();
+
+                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+                cv.threshold(gray, gray, 1, 255, cv.THRESH_BINARY + cv.THRESH_OTSU);
+
+                cv.findContours(gray, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE);
+
+                let svgContent = `<svg height="${gray.rows}" width="${gray.cols}" xmlns="http://www.w3.org/2000/svg">`;
+
+                for (let i = 0; i < contours.size(); i++) {
+                    let contour = contours.get(i);
+                    let d = `M ${contour.data32S[0]} ${contour.data32S[1]} `;
+                    for (let j = 1; j < contour.rows; j++) {
+                        d += `L${contour.data32S[j * 2]} ${contour.data32S[j * 2 + 1]} `;
+                    }
+                    d += "Z";
+                    svgContent += `<path d="${d}" fill="#cccccc" stroke="black" stroke-width="1" />`;
+                }
+
+                svgContent += "</svg>";
+                document.getElementById("svgOutput").innerHTML = svgContent;
+
+                cv.drawContours(src, contours, -1, new cv.Scalar(255, 0, 0, 255));
+                cv.imshow('canvasOutput', src);
+
+                src.delete();
+                gray.delete();
+                contours.delete();
+                hierarchy.delete();
+            }
+
+            document.getElementById('fileInput').addEventListener('change', (event) => {
+                let file = event.target.files[0];
+                if (!file) return;
+
+                let imgElement = document.createElement("img");
+                imgElement.onload = function () {
+                    processImage2(imgElement);
+                };
+                imgElement.src = URL.createObjectURL(file);
+            });
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Filtro Homomórfico com OpenCV.js</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Filtro Homomórfico com OpenCV.js</h1>
+    <button id="start" onclick="start()" disabled>Start</button>
+
+    <canvas id="outputCanvas"></canvas>
+
+    <script async src="./libs/opencv.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        var statusElement = document.createElement('div');
+        var startButton = document.getElementById('start');
+        document.body.appendChild(statusElement);
+
+        var Module = {
+            onRuntimeInitialized() {
+                statusElement.innerHTML = 'OpenCV.js is ready.';
+                startButton.disabled = false;
+            }
+        };
+
+        function start() {
+            function swapQuadrants(image) {
+                const tmp = new cv.Mat();
+                const centerX = image.cols / 2;
+                const centerY = image.rows / 2;
+
+                // Rearranja os quadrantes da transformada de Fourier
+                const rectA = new cv.Rect(0, 0, centerX, centerY);
+                const rectB = new cv.Rect(centerX, 0, centerX, centerY);
+                const rectC = new cv.Rect(0, centerY, centerX, centerY);
+                const rectD = new cv.Rect(centerX, centerY, centerX, centerY);
+
+                const A = image.roi(rectA);
+                const B = image.roi(rectB);
+                const C = image.roi(rectC);
+                const D = image.roi(rectD);
+
+                // Troca quadrantes (Top-Left com Bottom-Right)
+                A.copyTo(tmp);
+                D.copyTo(A);
+                tmp.copyTo(D);
+
+                // Troca quadrantes (Top-Right com Bottom-Left)
+                C.copyTo(tmp);
+                B.copyTo(C);
+                tmp.copyTo(B);
+
+                A.delete();
+                B.delete();
+                C.delete();
+                D.delete();
+                tmp.delete();
+            }
+
+            function createHomomorphicFilter(filter, rows, cols, gammaL, gammaH, c, d0) {
+                const centerX = cols / 2;
+                const centerY = rows / 2;
+
+                for (let i = 0; i < rows; i++) {
+                    for (let j = 0; j < cols; j++) {
+                        const distance = Math.sqrt(Math.pow(i - centerY, 2) + Math.pow(j - centerX, 2));
+                        const value = (gammaH - gammaL) * (1 - Math.exp(-c * (Math.pow(distance, 2) / Math.pow(d0, 2)))) + gammaL;
+                        filter.ptr(i, j)[0] = value;
+                        filter.ptr(i, j)[1] = value; // Parte imaginária
+                    }
+                }
+            }
+
+            function runHomomorphicFilter() {
+                const imagePath = '/assets/BIEL.png'; // Substitua pelo caminho da sua imagem
+
+                const imgElement = new Image();
+                imgElement.src = imagePath;
+                imgElement.onload = function () {
+                    const image = cv.imread(imgElement);
+                    cv.cvtColor(image, image, cv.COLOR_RGBA2GRAY, 0);
+
+                    // Passo 1: Aplicar logaritmo na imagem
+                    const logImage = new cv.Mat();
+                    image.convertTo(logImage, cv.CV_32F);
+                    cv.add(logImage, cv.Scalar.all(1.0), logImage); // Evitar log(0)
+                    cv.log(logImage, logImage);
+
+                    // Passo 2: Expandir a imagem para o tamanho ideal da DFT
+                    const dft_M = cv.getOptimalDFTSize(image.rows);
+                    const dft_N = cv.getOptimalDFTSize(image.cols);
+                    const padded = new cv.Mat();
+                    cv.copyMakeBorder(logImage, padded, 0, dft_M - image.rows, 0, dft_N - image.cols, cv.BORDER_CONSTANT, cv.Scalar.all(0));
+
+                    // Passo 3: Preparar a imagem complexa para a DFT
+                    const planes = new cv.MatVector();
+                    const real = new cv.Mat(padded.size(), cv.CV_32F);
+                    padded.convertTo(real, cv.CV_32F);
+                    const imaginary = cv.Mat.zeros(padded.size(), cv.CV_32F);
+                    planes.push_back(real);
+                    planes.push_back(imaginary);
+                    const complexImage = new cv.Mat();
+                    cv.merge(planes, complexImage);
+
+                    // Passo 4: Calcular a DFT
+                    cv.dft(complexImage, complexImage);
+                    swapQuadrants(complexImage);
+
+                    // Passo 5: Criar o filtro homomórfico
+                    const filter = cv.Mat.zeros(complexImage.rows, complexImage.cols, cv.CV_32FC2);
+                    const gammaL = 0.5;  // Ganho para baixas frequências (iluminação)
+                    const gammaH = 2.0;  // Ganho para altas frequências (reflectância)
+                    const c = 1.0;       // Controle da inclinação do filtro
+                    const d0 = 30.0;     // Frequência de corte
+                    createHomomorphicFilter(filter, complexImage.rows, complexImage.cols, gammaL, gammaH, c, d0);
+
+                    // Passo 6: Aplicar o filtro no domínio da frequência
+                    cv.mulSpectrums(complexImage, filter, complexImage, 0);
+
+                    // Passo 7: Calcular a DFT inversa
+                    swapQuadrants(complexImage);
+                    cv.idft(complexImage, complexImage);
+
+                    // Passo 8: Separar os planos real e imaginário
+                    cv.split(complexImage, planes);
+                    const result = new cv.Mat();
+                    cv.exp(planes.get(0), result); // Reverter o logaritmo
+
+                    // Passo 9: Normalizar e exibir o resultado
+                    cv.normalize(result, result, 0, 255, cv.NORM_MINMAX);
+                    result.convertTo(result, cv.CV_8U);
+
+                    cv.imshow('outputCanvas', result);
+
+                    // Liberar memória
+                    image.delete();
+                    logImage.delete();
+                    padded.delete();
+                    planes.delete();
+                    complexImage.delete();
+                    filter.delete();
+                    result.delete();
+                };
+            }
+        
+            runHomomorphicFilter()
+        }
+    </script>
+</body>
+
+</html>

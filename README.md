@@ -539,7 +539,7 @@ O código acima assume que a imagem de entrada é carregada corretamente e que o
 
 # **19.3 Exercícios**
 
-![Resultado](https://github.com/lucasdksan/pdi/blob/main/github/19.3.kai.png?raw=true)
+![Resultado](https://github.com/lucasdksan/pdi/blob/main/github/19.3.png?raw=true)
 
 Explicação do Código:
 Detecção de Bordas com Canny:
@@ -574,3 +574,26 @@ Pontos maiores são desenhados nas bordas para enfatizar os detalhes, enquanto p
 Ajuste Dinâmico:
 
 O limiar de Canny pode ser ajustado dinamicamente, permitindo explorar diferentes níveis de detalhes na imagem pontilhista.
+
+# **21.2 Exercícios**
+
+![Resultado](https://github.com/lucasdksan/pdi/blob/main/github/21.2-1.png?raw=true)
+
+Após a alteração para CHAIN_APPROX_SIMPLE, a quantidade de pontos nos contornos extraídos será reduzida, pois essa configuração remove pontos redundantes, preservando apenas os vértices essenciais. Isso resulta em uma representação mais eficiente e reduzida dos contornos em comparação com CHAIN_APPROX_NONE, que mantém todos os pontos do contorno detectado. O programa agora também exibe a contagem total de contornos extraídos no console.
+
+![Resultado](https://github.com/lucasdksan/pdi/blob/main/github/21.2-2.png?raw=true)
+
+# **TERCEIRA UNIDADE**
+
+# **21.2 Exercícios**
+
+![Resultado](https://github.com/lucasdksan/pdi/blob/main/github/21.2-1.png?raw=true)
+
+Após a alteração para CHAIN_APPROX_SIMPLE, a quantidade de pontos nos contornos extraídos será reduzida, pois essa configuração remove pontos redundantes, preservando apenas os vértices essenciais. Isso resulta em uma representação mais eficiente e reduzida dos contornos em comparação com CHAIN_APPROX_NONE, que mantém todos os pontos do contorno detectado. O programa agora também exibe a contagem total de contornos extraídos no console.
+
+![Resultado](https://github.com/lucasdksan/pdi/blob/main/github/21.2-2.png?raw=true)
+
+# **22.2 Exercícios**
+
+![Resultado](https://github.com/lucasdksan/pdi/blob/main/github/22.2-2.png?raw=true)
+
