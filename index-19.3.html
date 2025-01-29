@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>CannyPoints com OpenCV.js</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>CannyPoints: Pontilhismo com Bordas de Canny</h1>
+    <button id="start" onclick="start()" disabled>Start</button>
+    <div>
+        <label for="slider">Limiar Inferior de Canny:</label>
+        <input type="range" id="slider" min="0" max="200" value="50">
+        <span id="slider-value">50</span>
+    </div>
+    <canvas id="outputCanvas"></canvas>
+
+    <script async src="./libs/opencv.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        var statusElement = document.createElement('div');
+        var startButton = document.getElementById('start');
+        document.body.appendChild(statusElement);
+
+        var Module = {
+            onRuntimeInitialized() {
+                statusElement.innerHTML = 'OpenCV.js is ready.';
+                startButton.disabled = false;
+            }
+        };
+
+        function start() {
+            // Constantes
+            const STEP = 5;
+            const JITTER = 3;
+            const RAIO_MAX = 5; // Raio máximo para pontos nas bordas
+            const RAIO_MIN = 1; // Raio mínimo para pontos nas regiões suaves
+
+            // Carrega a imagem
+            let imgElement = document.createElement("img");
+            imgElement.src = "/assets/lena.png"; // Substitua pelo caminho da sua imagem
+            imgElement.onload = function () {
+                // Carrega a imagem em um objeto Mat do OpenCV
+                let image = cv.imread(imgElement);
+                cv.cvtColor(image, image, cv.COLOR_RGBA2GRAY, 0); // Converte para escala de cinza
+
+                let width = image.cols;
+                let height = image.rows;
+
+                // Elementos da interface
+                let outputCanvas = document.getElementById("outputCanvas");
+                let slider = document.getElementById("slider");
+                let sliderValue = document.getElementById("slider-value");
+
+                // Função para aplicar o pontilhismo com Canny
+                function applyCannyPoints() {
+                    let threshold = parseInt(slider.value);
+                    sliderValue.textContent = threshold;
+
+                    // Aplica o algoritmo de Canny para detectar bordas
+                    let edges = new cv.Mat();
+                    cv.Canny(image, edges, threshold, 3 * threshold);
+
+                    // Cria uma matriz para armazenar a imagem pontilhista
+                    let points = new cv.Mat(height, width, cv.CV_8UC1, new cv.Scalar(255));
+
+                    // Gera os intervalos de x e y
+                    let xrange = Array.from({ length: Math.floor(height / STEP) }, (_, i) => i * STEP + STEP / 2);
+                    let yrange = Array.from({ length: Math.floor(width / STEP) }, (_, i) => i * STEP + STEP / 2);
+
+                    // Embaralha os intervalos
+                    xrange = shuffleArray(xrange);
+                    yrange = shuffleArray(yrange);
+
+                    // Desenha os pontos
+                    for (let i of xrange) {
+                        yrange = shuffleArray(yrange); // Embaralha yrange a cada linha
+                        for (let j of yrange) {
+                            let x = i + Math.floor(Math.random() * (2 * JITTER)) - JITTER + 1;
+                            let y = j + Math.floor(Math.random() * (2 * JITTER)) - JITTER + 1;
+
+                            // Garante que x e y estão dentro dos limites da imagem
+                            x = Math.max(0, Math.min(x, height - 1));
+                            y = Math.max(0, Math.min(y, width - 1));
+
+                            let gray = image.ucharPtr(x, y)[0]; // Obtém o valor de intensidade do pixel
+
+                            // Verifica se o pixel está na borda
+                            let isEdge = edges.ucharPtr(x, y)[0] > 0;
+
+                            // Define o raio do ponto com base na presença de borda
+                            let radius = isEdge ? RAIO_MAX : RAIO_MIN;
+
+                            // Desenha o ponto
+                            cv.circle(points, new cv.Point(y, x), radius, new cv.Scalar(gray, gray, gray), -1, cv.LINE_AA);
+                        }
+                    }
+
+                    // Exibe o resultado no canvas
+                    cv.imshow(outputCanvas, points);
+
+                    // Libera a memória
+                    edges.delete();
+                    points.delete();
+                }
+
+                // Atualiza o pontilhismo quando o slider é alterado
+                slider.oninput = applyCannyPoints;
+
+                // Aplica o pontilhismo inicialmente
+                applyCannyPoints();
+            };
+
+            // Função para embaralhar um array
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+        }
+    </script>
+</body>
+
+</html>

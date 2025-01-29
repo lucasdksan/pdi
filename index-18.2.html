@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThresholdOtsu</title>
+    <style>
+        canvas {
+            display: block;
+            margin: 10px auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>ThresholdOtsu</h2>
+    <input type="file" onchange="thresholdOtsu(this)">
+    <canvas id="outputCanvas"></canvas>
+</body>
+<script async src="./libs/opencv.js" type="text/javascript"></script>
+<script>
+    var statusElement = document.createElement('div');
+    document.body.appendChild(statusElement);
+
+    var startButton = document.getElementById('start');
+
+    // Inicialização do OpenCV.js
+    var Module = {
+        onRuntimeInitialized() {
+            statusElement.innerHTML = 'OpenCV.js is ready.';
+            startButton.disabled = false;
+        }
+    };
+
+    function thresholdOtsu(inputElement) {
+        let file = inputElement.files[0];
+        if (!file) return;
+
+        let reader = new FileReader();
+        reader.onload = function (event) {
+            let imgElement = document.createElement("img");
+            imgElement.src = event.target.result;
+            imgElement.onload = function () {
+                let mat = cv.imread(imgElement); // Carrega imagem para um Mat OpenCV
+                cv.cvtColor(mat, mat, cv.COLOR_RGBA2GRAY, 0); // Converte para escala de cinza
+
+                let dst = new cv.Mat();
+                cv.threshold(mat, dst, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU);
+
+                cv.imshow('outputCanvas', dst); // Exibe resultado
+                cv.imwrite('otsu.png', dst); // Salvar a imagem (necessário backend para salvar de fato)
+
+                mat.delete();
+                dst.delete();
+            };
+        };
+        reader.readAsDataURL(file);
+    }
+</script>
+
+</html>
